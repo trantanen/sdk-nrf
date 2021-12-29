@@ -124,11 +124,11 @@ static int cmd_uart_disable_when_sleep(void)
 	/* Modem sleep notification must be subscribed to. Check if the user has already subscribed
 	 * to avoid resubscribing and potentially altering the configured notification threshold.
 	 */
-	if (!link_shell_msleep_notifications_subscribed) {
+	/*if (!link_shell_msleep_notifications_subscribed) {
 		link_modem_sleep_notifications_subscribe(
 			CONFIG_LTE_LC_MODEM_SLEEP_PRE_WARNING_TIME_MS,
 			CONFIG_LTE_LC_MODEM_SLEEP_NOTIFICATIONS_THRESHOLD_MS);
-	}
+	}*/
 
 	mosh_print("during_sleep: disabling UARTs during the modem sleep mode");
 

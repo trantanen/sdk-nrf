@@ -9,7 +9,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
-#include <helpers/nrfx_reset_reason.h>
+//#include <helpers/nrfx_reset_reason.h>
 #include <nrf_modem.h>
 
 #include <sys/types.h>
@@ -148,6 +148,7 @@ void nrf_modem_fault_handler(struct nrf_modem_fault_info *fault_info)
 	__ASSERT(false, "Modem crash detected, halting application execution");
 }
 
+#if 0
 static void reset_reason_str_get(char *str, uint32_t reason)
 {
 	size_t len;
@@ -197,7 +198,7 @@ static void mosh_print_reset_reason(void)
 
 	printk("\nReset reason: %s\n", reset_reason_str);
 }
-
+#endif
 #if defined(CONFIG_DK_LIBRARY)
 static void button_handler(uint32_t button_states, uint32_t has_changed)
 {
@@ -237,7 +238,7 @@ int start_main(void)
 
 	__ASSERT(mosh_shell != NULL, "Failed to get shell backend");
 
-	mosh_print_reset_reason();
+	//mosh_print_reset_reason();
 
 	mosh_print_version_info();
 
@@ -307,8 +308,8 @@ int start_main(void)
 		printk("Could not initialize nrf_modem_lib, err %d\n", err);
 		printk("Fatal error\n");
 		return 0;
-	}
 #endif
+	}
 #else
 	/* Wait until the LwM2M carrier library has initialized the modem library. */
 	k_sem_take(&mosh_carrier_lib_initialized, K_FOREVER);
