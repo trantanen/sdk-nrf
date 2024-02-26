@@ -731,26 +731,41 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name)
 
 int get_mac_address(char *buffer, int size, char *interface)
 {
-	const struct device *dev = device_get_binding(interface);
-	struct net_if *wifi_iface = net_if_lookup_by_dev(dev);
+	const struct device *dev;
+	struct net_if *wifi_iface;
+	struct net_linkaddr *linkaddr;
 
-	if (net_if_is_wifi(wifi_iface)) {
-		struct net_linkaddr *linkaddr = net_if_get_link_addr(wifi_iface);
-
-		if (!linkaddr || linkaddr->len != WIFI_MAC_ADDR_LEN) {
-			return false;
-		}
-
-		sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x",
-			linkaddr->addr[0] & 0xff, linkaddr->addr[1] & 0xff,
-			linkaddr->addr[2] & 0xff, linkaddr->addr[3] & 0xff,
-			linkaddr->addr[4] & 0xff, linkaddr->addr[5] & 0xff);
-		indigo_logger(LOG_LEVEL_INFO,
-			      "%s - %d: mac address:%s", __func__, __LINE__, buffer);
-		return 0;
+	if (!interface) {
+		return 1;
+	}
+	dev = device_get_binding(interface);
+	if (!dev) {
+		return 1;
 	}
 
-	return 1;
+	wifi_iface = net_if_lookup_by_dev(dev);
+	if (!wifi_iface) {
+		return 1;
+	}
+
+	if (!net_if_is_wifi(wifi_iface)) {
+		return 1;
+	}
+
+	linkaddr = net_if_get_link_addr(wifi_iface);
+	if (!linkaddr || linkaddr->len != WIFI_MAC_ADDR_LEN) {
+		return false;
+	}
+
+	sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x",
+		linkaddr->addr[0] & 0xff, linkaddr->addr[1] & 0xff,
+		linkaddr->addr[2] & 0xff, linkaddr->addr[3] & 0xff,
+		linkaddr->addr[4] & 0xff, linkaddr->addr[5] & 0xff);
+	indigo_logger(LOG_LEVEL_INFO,
+				"%s - %d: mac address:%s", __func__, __LINE__, buffer);
+	return 0;
+
+
 }
 
 int set_mac_address(char *ifname, char *mac)

@@ -7,8 +7,11 @@
 #ifndef SCAN_WIFI_H
 #define SCAN_WIFI_H
 
+#include <zephyr/net/net_if.h>
 #include <net/wifi_location_common.h>
 
+/* This can be static, but is made public to make it available for CMock. */
+struct net_if *get_wifi_iface(void);
 int scan_wifi_init(void);
 void scan_wifi_execute(int32_t timeout, struct k_sem *wifi_scan_ready);
 struct wifi_scan_info *scan_wifi_results_get(void);

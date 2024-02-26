@@ -44,6 +44,8 @@ cmock_handle(${ZEPHYR_BASE}/include/zephyr/net/wifi_mgmt.h
 cmock_handle(${ZEPHYR_BASE}/include/zephyr/device.h
 	     FUNC_EXCLUDE ".*DEVICE_DT_NAME_GET"
 	     WORD_EXCLUDE ".*device_visitor_callback_t.*")
+cmock_handle(${ZEPHYR_NRF_MODULE_DIR}/lib/location/scan_wifi.h
+	     FUNC_EXCLUDE ".*scan_wifi.*")
 
 zephyr_include_directories(${ZEPHYR_NRFXLIB_MODULE_DIR}/nrf_modem/include)
 zephyr_include_directories(${ZEPHYR_NRF_MODULE_DIR}/subsys/net/lib/nrf_cloud/include)
