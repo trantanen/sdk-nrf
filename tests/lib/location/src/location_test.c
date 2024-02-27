@@ -24,7 +24,6 @@
 #include "cmock_net_if.h"
 #include "cmock_net_mgmt.h"
 #include "cmock_wifi_mgmt.h"
-#include "cmock_scan_wifi.h"
 
 /* NOTE: Sleep, e.g. k_sleep(K_MSEC(1)), is used after many location library API
  *       function calls because otherwise some of the threaded work in location library
@@ -32,6 +31,12 @@
  */
 
 #if defined(CONFIG_LOCATION_METHOD_WIFI)
+
+/* Define a dummy driver just that the linker finds it. Otherwise we get a complaint like:
+ *     undefined reference to `__device_dts_ord_12'
+ */
+#define DT_DRV_COMPAT nordic_wlan0
+DEVICE_DT_INST_DEFINE(0, NULL, NULL, NULL, NULL, POST_KERNEL, 0, NULL);
 
 /* Custom mock for WiFi scan request net_mgmt_NET_REQUEST_WIFI_SCAN(). */
 static struct net_if wifi_iface;
@@ -476,10 +481,11 @@ void test_location_init(void)
 #endif
 
 #if defined(CONFIG_LOCATION_METHOD_WIFI)
-	__cmock_get_wifi_iface_ExpectAndReturn(&wifi_iface);
 	/* __cmock_device_get_binding_ExpectAndReturn is not called for an unknown reason.
 	 * __syscall in the function declaration may have something to do with it.
 	 */
+	__cmock_z_device_is_ready_IgnoreAndReturn(true);
+	__cmock_net_if_lookup_by_dev_IgnoreAndReturn(&wifi_iface);
 	__cmock_net_mgmt_init_event_callback_Ignore();
 	__cmock_net_mgmt_add_event_callback_Ignore();
 

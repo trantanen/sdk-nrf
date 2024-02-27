@@ -154,11 +154,11 @@ int scan_wifi_cancel(void)
 	return 0;
 }
 
-struct net_if *get_wifi_iface(void)
+int scan_wifi_init(void)
 {
 	const struct device *wifi_dev;
-	struct net_if *wifi_iface;
 
+	wifi_iface = NULL;
 #if defined(CONFIG_WIFI_NRF700X)
 	wifi_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_wifi));
 #else
@@ -167,28 +167,18 @@ struct net_if *get_wifi_iface(void)
 
 	if (!wifi_dev) {
 		LOG_ERR("Wi-Fi device not found");
-		return NULL;
+		return -ENODEV;
 	}
 
 	if (!device_is_ready(wifi_dev)) {
 		LOG_ERR("Wi-Fi device %s not ready", wifi_dev->name);
-		return NULL;
+		return -ENODEV;
 	}
 
 	wifi_iface = net_if_lookup_by_dev(wifi_dev);
 	if (wifi_iface == NULL) {
 		LOG_ERR("No Wi-Fi interface found: %s", wifi_dev->name);
-		return NULL;
-	}
-
-	return wifi_iface;
-}
-
-int scan_wifi_init(void)
-{
-	wifi_iface = get_wifi_iface();
-	if (!wifi_iface) {
-		return -1;
+		return -EFAULT;
 	}
 
 	net_mgmt_init_event_callback(&scan_wifi_net_mgmt_cb, scan_wifi_net_mgmt_event_handler,
