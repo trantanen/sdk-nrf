@@ -8,6 +8,7 @@
 #define SCAN_WIFI_H
 
 #include <zephyr/net/net_if.h>
+#include <modem/location.h>
 #include <net/wifi_location_common.h>
 
 /* This can be static, but is made public to make it available for CMock. */
