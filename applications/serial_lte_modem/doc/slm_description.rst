@@ -16,7 +16,7 @@ The nRF91 Series SiP integrates both a full LTE modem and an application MCU, en
 
 However, if you want to run your application on a different chip and use the nRF91 Series device only as a modem, the serial LTE modem application provides you with an interface for controlling the LTE modem through AT commands.
 
-The application accepts both the modem-specific AT commands and proprietary AT commands.
+The application accepts both the modem-specific AT commands (starting with `+` and `%`) and proprietary AT commands (starting with `#`).
 The AT commands are documented in the following guides:
 
 * Modem-specific AT commands - `nRF91x1 AT Commands Reference Guide`_  and `nRF9160 AT Commands Reference Guide`_
