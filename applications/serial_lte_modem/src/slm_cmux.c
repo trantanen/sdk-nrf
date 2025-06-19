@@ -266,7 +266,7 @@ static int cmux_stop(void)
 	return 0;
 }
 
-static bool cmux_is_started(void)
+bool slm_cmux_is_started(void)
 {
 	return (cmux.uart_pipe != NULL);
 }
@@ -338,7 +338,7 @@ static int cmux_start(void)
 {
 	int ret;
 
-	if (cmux_is_started()) {
+	if (slm_cmux_is_started()) {
 		ret = modem_pipe_open(cmux.uart_pipe, K_SECONDS(CONFIG_SLM_MODEM_PIPE_TIMEOUT));
 		if (!ret) {
 			cmux.uart_pipe_open = true;
@@ -405,7 +405,7 @@ static int handle_at_cmux(enum at_parser_cmd_type cmd_type, struct at_parser *pa
 		return -EINVAL;
 	}
 
-	if (param_count == 1 && cmux_is_started()) {
+	if (param_count == 1 && slm_cmux_is_started()) {
 		return -EALREADY;
 	}
 
@@ -422,7 +422,7 @@ static int handle_at_cmux(enum at_parser_cmd_type cmd_type, struct at_parser *pa
 			return -ENOTSUP;
 		}
 #endif
-		if (cmux_is_started()) {
+		if (slm_cmux_is_started()) {
 			/* Just update the AT channel, first answering "OK" on the current DLCI. */
 			rsp_send_ok();
 			cmux.at_channel = at_channel;

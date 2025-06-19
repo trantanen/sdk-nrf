@@ -313,21 +313,28 @@ static int ppp_start(void)
 		goto error;
 	}
 
+	/* If CMUX is built or started, reserve PPP channel from CMUX */
 #if defined(CONFIG_SLM_CMUX)
-	ppp_pipe = slm_cmux_reserve(CMUX_PPP_CHANNEL);
-	/* The pipe opening is managed by CMUX. */
+	if (slm_cmux_is_started()) {
+		ppp_pipe = slm_cmux_reserve(CMUX_PPP_CHANNEL);
+		/* The pipe opening is managed by CMUX. */
+	}
 #endif
 
 	modem_ppp_attach(&ppp_module, ppp_pipe);
 
-#if !defined(CONFIG_SLM_CMUX)
-	ret = modem_pipe_open(ppp_pipe, K_SECONDS(CONFIG_SLM_MODEM_PIPE_TIMEOUT));
-	if (ret) {
-		LOG_ERR("Failed to open PPP pipe (%d).", ret);
-		ppp_start_failure();
-		goto error;
-	}
+	/* If CMUX is not built or started, open PPP pipe */
+#if defined(CONFIG_SLM_CMUX)
+	if (!slm_cmux_is_started())
 #endif
+	{
+		ret = modem_pipe_open(ppp_pipe, K_SECONDS(CONFIG_SLM_MODEM_PIPE_TIMEOUT));
+		if (ret) {
+			LOG_ERR("Failed to open PPP pipe (%d).", ret);
+			ppp_start_failure();
+			goto error;
+		}
+	}
 
 	net_if_carrier_on(ppp_iface);
 
@@ -587,31 +594,10 @@ static void ppp_net_mgmt_event_handler(struct net_mgmt_event_callback *cb,
 
 int slm_ppp_init(void)
 {
-#if !defined(CONFIG_SLM_CMUX)
 	if (!device_is_ready(ppp_uart_dev)) {
 		return -EAGAIN;
 	}
 
-	{
-		static struct modem_backend_uart ppp_uart_backend;
-		static uint8_t ppp_uart_backend_receive_buf[sizeof(ppp_data_buf)]
-			__aligned(sizeof(void *));
-		static uint8_t ppp_uart_backend_transmit_buf[sizeof(ppp_data_buf)];
-
-		const struct modem_backend_uart_config uart_backend_config = {
-			.uart = ppp_uart_dev,
-			.receive_buf = ppp_uart_backend_receive_buf,
-			.receive_buf_size = sizeof(ppp_uart_backend_receive_buf),
-			.transmit_buf = ppp_uart_backend_transmit_buf,
-			.transmit_buf_size = sizeof(ppp_uart_backend_transmit_buf),
-		};
-
-		ppp_pipe = modem_backend_uart_init(&ppp_uart_backend, &uart_backend_config);
-		if (!ppp_pipe) {
-			return -ENOSYS;
-		}
-	}
-#endif
 	k_msgq_init(&ppp_work.queue, (char *)&ppp_work.queue_buf, sizeof(struct ppp_event),
 		    sizeof(ppp_work.queue_buf) / sizeof(struct ppp_event));
 	k_work_init(&ppp_work.work, ppp_work_fn);
@@ -632,6 +618,49 @@ int slm_ppp_init(void)
 	return 0;
 }
 
+int slm_ppp_init_uart(void)
+{
+	int ret = 0;
+
+#if defined(CONFIG_SLM_CMUX)
+	if (!slm_cmux_is_started())
+#endif
+	{
+		if (!DT_NODE_EXISTS(DT_CHOSEN(ncs_slm_ppp_uart))) {
+			/* Remove AT backend because the only UART we have will be used for PPP */
+			ret = slm_at_set_backend((struct slm_at_backend) {
+				.start = NULL,
+				.send = NULL,
+				.stop = NULL
+			});
+			if (ret) {
+				LOG_ERR("Failed to remove AT backend. (%d)", ret);
+			}
+		}
+
+		static struct modem_backend_uart ppp_uart_backend;
+		static uint8_t ppp_uart_backend_receive_buf[sizeof(ppp_data_buf)]
+			__aligned(sizeof(void *));
+		static uint8_t ppp_uart_backend_transmit_buf[sizeof(ppp_data_buf)];
+
+		const struct modem_backend_uart_config uart_backend_config = {
+			.uart = ppp_uart_dev,
+			.receive_buf = ppp_uart_backend_receive_buf,
+			.receive_buf_size = sizeof(ppp_uart_backend_receive_buf),
+			.transmit_buf = ppp_uart_backend_transmit_buf,
+			.transmit_buf_size = sizeof(ppp_uart_backend_transmit_buf),
+		};
+
+		ppp_pipe = modem_backend_uart_init(&ppp_uart_backend, &uart_backend_config);
+		if (!ppp_pipe) {
+			return -ENOSYS;
+		}
+		/* Wait for the UART to be ready */
+		k_sleep(K_MSEC(100));
+	}
+	return ret;
+}
+
 SLM_AT_CMD_CUSTOM(xppp, "AT#XPPP", handle_at_ppp);
 static int handle_at_ppp(enum at_parser_cmd_type cmd_type, struct at_parser *parser,
 			 uint32_t param_count)
@@ -650,6 +679,11 @@ static int handle_at_ppp(enum at_parser_cmd_type cmd_type, struct at_parser *par
 	}
 	if (cmd_type != AT_PARSER_CMD_TYPE_SET || param_count < 2 || param_count > 3) {
 		return -EINVAL;
+	}
+
+	ret = slm_ppp_init_uart();
+	if (ret) {
+		return ret;
 	}
 
 	ret = at_parser_num_get(parser, 1, &op);

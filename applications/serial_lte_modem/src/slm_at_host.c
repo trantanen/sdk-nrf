@@ -479,6 +479,10 @@ int slm_at_set_backend(const struct slm_at_backend new_backend)
 	}
 
 	at_backend = new_backend;
+	if (new_backend.start == NULL) {
+		LOG_INF("AT backend removed. You cannot send AT commands before restarting SLM.");
+		return 0;
+	}
 	ret = new_backend.start();
 	if (ret) {
 		LOG_ERR("Failed to start AT backend. (%d)", ret);

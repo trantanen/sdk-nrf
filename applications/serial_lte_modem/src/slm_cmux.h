@@ -24,5 +24,6 @@ enum cmux_channel {
 };
 struct modem_pipe *slm_cmux_reserve(enum cmux_channel);
 void slm_cmux_release(enum cmux_channel, bool fallback);
+bool slm_cmux_is_started(void);
 
 #endif
