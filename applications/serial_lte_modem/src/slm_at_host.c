@@ -1062,3 +1062,80 @@ void slm_at_host_uninit(void)
 
 	LOG_DBG("at_host uninit done");
 }
+
+#include <zephyr/logging/log_ctrl.h>
+
+SLM_AT_CMD_CUSTOM(xsleep, "AT#XLOG", handle_at_log);
+static int handle_at_log(enum at_parser_cmd_type cmd_type, struct at_parser *parser,
+			 uint32_t param_count)
+{
+	int ret = -EINVAL;
+	int log_level;
+	char log_source[32];
+	size_t len = sizeof(log_source);
+
+	if (cmd_type == AT_PARSER_CMD_TYPE_SET) {
+		if (param_count < 2) {
+			LOG_ERR("At least 2 parameters required");
+			return -EINVAL;
+		}
+
+		ret = util_string_get(parser, 1, log_source, &len);
+		if (ret) {
+			return -EINVAL;
+		}
+		ret = at_parser_num_get(parser, 2, &log_level);
+		if (ret) {
+			return -EINVAL;
+		}
+		LOG_DBG("Requested log level %d for '%s'", log_level, log_source);
+		log_flush();
+
+		int log_source_id = log_source_id_get(log_source);
+		bool success = false;
+		if (log_source_id < 0) {
+
+			/* Set logging level for all log sources that start with 'log_source' */
+			for (int i = 0; i < log_src_cnt_get(Z_LOG_LOCAL_DOMAIN_ID); i++) {
+				const char *sname = log_source_name_get(Z_LOG_LOCAL_DOMAIN_ID, i);
+
+				if ((sname != NULL) && (strncmp(sname, log_source, strlen(log_source)) == 0)) {
+					LOG_DBG("Setting log level %d for '%s'", log_level, sname);
+					log_filter_set(NULL, 0,
+						i,
+						log_level);
+					success = true;
+				} else if (sname == NULL) {
+					LOG_ERR("we shouldn't get here");
+				}
+			}			
+			if (!success) {
+				LOG_ERR("Log source '%s' is unknown", log_source);
+				return -EFAULT;
+			}
+		} else {
+			LOG_DBG("Setting log level %d for '%s'", log_level, log_source);
+			log_filter_set(NULL, 0,
+				(int16_t)log_source_id_get(log_source),
+				log_level);
+		}
+	} else if (cmd_type == AT_PARSER_CMD_TYPE_TEST) {
+		rsp_send("\r\n#XLOG: 0,1,2,3,4\r\n");
+		ret = 0;
+	} else if (cmd_type == AT_PARSER_CMD_TYPE_READ) {
+		rsp_send("\r\n#XLOG: \r\n");
+		for (int i = 0; i < log_src_cnt_get(Z_LOG_LOCAL_DOMAIN_ID); i++) {
+			const char *sname = log_source_name_get(Z_LOG_LOCAL_DOMAIN_ID, i);
+			//uint32_t log_level = log_filter_get(&log_backend_rtt, Z_LOG_LOCAL_DOMAIN_ID, i, true);
+
+			if (sname != NULL) {
+				rsp_send("%s\r\n", sname);
+				//rsp_send("%s: %d\r\n", sname, log_level);
+			}
+		}
+		ret = 0;
+	}
+	log_flush();
+
+	return ret;
+}

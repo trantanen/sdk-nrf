@@ -18,7 +18,7 @@
 #include "slm_util.h"
 #include "slm_ctrl_pin.h"
 
-LOG_MODULE_REGISTER(slm, CONFIG_SLM_LOG_LEVEL);
+LOG_MODULE_REGISTER(slm_main, CONFIG_SLM_LOG_LEVEL);
 
 #define SLM_WQ_STACK_SIZE	KB(4)
 #define SLM_WQ_PRIORITY		K_LOWEST_APPLICATION_THREAD_PRIO
